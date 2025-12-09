@@ -2,67 +2,9 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import { cookies } from 'next/headers';
+import { getDefaultDashboardRoute, getRouteOwner, isAuthRoute, UserRole } from './lib/auth-utils';
 
-type UserRole = "ADMIN" | "DOCTOR" | "PATIENT";
 
-type RoutesConfig = {
-    exact: string[];
-    patterns: RegExp[];
-};
-
-const authRoute = ['/login', '/register', '/forget-password', '/reset-password'];
-
-const commonProtectedRoute: RoutesConfig = {
-    exact: ['/my-profile', '/setting'],
-    patterns: []
-};
-
-const doctorProtectedRoute: RoutesConfig = {
-    exact: [],
-    patterns: [/^\/doctor/]
-};
-
-const adminProtectedRoute: RoutesConfig = {
-    exact: [],
-    patterns: [/^\/admin/]
-};
-
-const patientProtectedRoute: RoutesConfig = {
-    exact: [],
-    patterns: [/^\/dashboard/]
-};
-
-const isAuthRoute = (pathName: string) => {
-    return authRoute.some(route => route === pathName);
-};
-
-const isRouteMatches = (pathName: string, routes: RoutesConfig) => {
-    if (routes.exact.includes(pathName)) return true;
-    return routes.patterns.some(pattern => pattern.test(pathName));
-};
-
-const getRouteOwner = (
-    pathName: string
-): "ADMIN" | "DOCTOR" | "PATIENT" | "COMMON" | null => {
-    if (isRouteMatches(pathName, adminProtectedRoute)) return "ADMIN";
-    if (isRouteMatches(pathName, doctorProtectedRoute)) return "DOCTOR";
-    if (isRouteMatches(pathName, patientProtectedRoute)) return "PATIENT";
-    if (isRouteMatches(pathName, commonProtectedRoute)) return "COMMON";
-    return null;
-};
-
-const getDefaultDashboardRoute = (role: UserRole) => {
-    switch (role) {
-        case "ADMIN":
-            return '/admin/dashboard';
-        case "DOCTOR":
-            return '/doctor/dashboard';
-        case "PATIENT":
-            return '/dashboard';
-        default:
-            return '/login';
-    }
-};
 
 export async function proxy(request: NextRequest) {
     const pathName = request.nextUrl.pathname;
@@ -84,7 +26,7 @@ export async function proxy(request: NextRequest) {
                 return NextResponse.redirect(new URL("/login", request.url));
             }
 
-            userRole = verified.role as UserRole;
+            userRole = verified.role as UserRole    ;
         } catch {
             cookieStore.delete("accessToken");
             cookieStore.delete("refreshToken");

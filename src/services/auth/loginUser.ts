@@ -6,6 +6,7 @@ import { parse } from 'cookie';
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { NextResponse } from 'next/server';
+import { isValidRedirectForRole } from '@/lib/auth-utils';
 const loginZodValidation = z.object({
     email: z
         .email("Invalid email address"),
@@ -47,7 +48,7 @@ export const loginUser = async (_currentState: any, formData: FormData): Promise
             }
         })
 
-        const result = await res.json()
+
 
         const setCookieHeader = res.headers.getSetCookie();
         if (setCookieHeader && setCookieHeader.length > 0) {
@@ -110,8 +111,19 @@ export const loginUser = async (_currentState: any, formData: FormData): Promise
             }
         };
         const userRole: UserRole = verified.role;
-        const redirectPath = redirectTo ? redirectTo?.toString() : getDefaultDashboardRoute(userRole)
-        redirect(redirectPath)
+
+        if (redirectTo) {
+            const requestPath = redirectTo.toString();
+
+
+            if (isValidRedirectForRole(requestPath, userRole)) {
+                redirect(requestPath)
+            } else {
+                redirect(getDefaultDashboardRoute(userRole));
+            }
+        }
+
+
 
         // return result;
     } catch (error: any) {
